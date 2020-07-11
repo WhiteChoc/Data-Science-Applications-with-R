@@ -1,0 +1,17 @@
+---
+title: "r-programming"
+author: "sdt"
+date: "2020/7/10"
+output: pdf_document
+---
+
+```{r setup, message = FALSE, include=FALSE}
+options(htmltools.dir.version = FALSE)
+library(tidyverse)
+```
+
+```{r}
+library(datasets)
+states <- data.frame(state.x77, abb=state.abb, region=state.region, division=state.division)
+```
+
