@@ -1,0 +1,269 @@
+---
+title: "Homework 2"
+author: "Shen Dingtao  3170104764"
+output: pdf_document
+---
+```{r setup, message = F, include=FALSE}
+options(htmltools.dir.version = FALSE)
+library(tidyverse)
+library(DAAG)
+library(MASS)
+```
+**1. _Loading and cleaning_**
+
+**(a)**
+```{r}
+ca_pa <- read.csv("data/calif_penn_2011.csv",header=T)
+```
+**(b)**
+```{r}
+dim(ca_pa)
+```
+So the data frame has 11275 rows and 34 columns.
+
+**(c)**
+```{r}
+colSums(apply(ca_pa,c(1,2),is.na))
+```
+This command is used to count the number of NA (not a number) values in each column of the data frame.
+
+- The `apply()` function loops through all the elements of the matrix `ca_pa` and applies the `is.na()` function which returns TRUE if the element is not a number and FALSE otherwise. 
+
+- The resulting matrix of TRUE and FALSE values is then given as input to `colSums()` function, which counts the number of TRUE values in each column.
+
+**(d)**
+```{r}
+new_ca_pa<-na.omit(ca_pa)
+```
+**(e)**
+```{r}
+nrow(ca_pa)-nrow(new_ca_pa)
+```
+The result shows that the `na.omit()` command eliminate 670 rows. 
+
+**(f)** My answer in (c) and (e) are compatible. We can run the following command to verify this:
+```{r}
+colSums(apply(new_ca_pa,c(1,2),is.na))
+```
+The values of all columns are all 0, which means that we have successfully purged ca_pa from any row containing NA value.
+
+**2. _This Very New House_ ** 
+
+**(a)**
+```{r}
+ggplot(data = new_ca_pa) +
+geom_point(aes(x = Built_2005_or_later, 
+    y = Median_house_value),na.rm = TRUE) +
+labs(x = "Percetsge of Houses Built Since 2005",
+y = "Median House Value") +
+theme_bw() +
+theme(legend.title=element_blank())
+```
+**(b)** With following commands, we make a pair of plots that breaks this out by state, which shows the median house prices against `Built_2005_or_later` in California(state 6) and Pennsylvania(state 42) respectively.
+
+```{r}
+d<-data.frame(STATEFP=c(6,42),state=c("California","Pennsylvania"))
+ca_pa2<-left_join(new_ca_pa,d,by="STATEFP")
+```
+
+```{r message=FALSE}
+ggplot(data = ca_pa2) +
+geom_point(aes(x = Built_2005_or_later, 
+    y = Median_house_value),na.rm = TRUE) +
+labs(x = "Percetsge of Houses Built Since 2005",
+y = "Median House Value") +facet_wrap(~ state)
+```
+
+**3. _Nobody Home_**
+
+**(a)** Add a new column to the dataframe which contains the vacancy rate.
+```{r}
+ca_pa3 <- ca_pa2 %>%
+  mutate(Vacant_Rate=Vacant_units/Total_units)
+```
+Minimum:
+```{r}
+min(ca_pa3$Vacant_Rate,na.rm = TRUE)
+```
+Maximum:
+```{r}
+max(ca_pa3$Vacant_Rate,na.rm = TRUE)
+```
+Mean:
+```{r}
+mean(ca_pa3$Vacant_Rate,na.rm = TRUE)
+```
+Median:
+```{r}
+median(ca_pa3$Vacant_Rate,na.rm = TRUE)
+```
+**(b)** Plot the vacancy rate against median house value:
+```{r message=FALSE}
+ggplot(data = ca_pa3) +
+geom_point(aes(x = Median_house_value, 
+    y = Vacant_Rate),na.rm = TRUE) +
+labs(x = "Median House Value",
+y = "Vacant Rate",title = "Vacant_Rate vs Median_house_value") 
+```
+**(c)** Plot vacancy rate against median house value separately for California and for Pennsylvania:
+```{r}
+ggplot(data = ca_pa3) +
+geom_point(aes(x = Median_house_value, 
+    y = Vacant_Rate,color=state),na.rm = TRUE) +
+facet_wrap(~ state)
+```
+
+**4.** 
+
+**(a)** The block of code is supposed to calculate the median house value in Alameda Country (country 1 in California). It firstly selects the rows of California, whose STATEFP=6, and then selects the rows of Alameda, whose COUNTRYFP=1 among the selected rows. Finally select median value of these rows' Median house value to get the median house value in Alameda. 
+
+**(b)** We can obtain the same result as the block of code with following command:
+```{r}
+ca_pa3 %>% filter(STATEFP==6,COUNTYFP==1) %>% {median(.$Median_house_value,na.rm = TRUE)}
+```
+**(c)** We can obtain the average percentages of housing built since 2005 for Alameda, Santa Clara and Allegheny Counties with following commands:
+(i) For Alameda:
+```{r}
+(Alameda_avg <- ca_pa3 %>% filter(STATEFP==6&COUNTYFP==1 )) %>% {mean(.$Built_2005_or_later,na.rm = TRUE)}
+```
+(ii) For Santa Clara:
+```{r}
+(Alameda_avg <- ca_pa3 %>% filter(STATEFP==6&COUNTYFP==85 )) %>% {mean(.$Built_2005_or_later,na.rm = TRUE)}
+```
+(ii) For Allegheny:
+```{r}
+(Alameda_avg <- ca_pa3 %>% filter(STATEFP==42&COUNTYFP==3 )) %>% {mean(.$Built_2005_or_later,na.rm = TRUE)}
+```
+
+**(d)** the correlation between median house value and the percent of housing built since 2005
+(i) In the whole data:
+```{r}
+cor(ca_pa3$Median_house_value,ca_pa3$Built_2005_or_later)
+```
+(ii) In all of California
+```{r}
+ca_pa3 %>% filter(STATEFP==6) %>% 
+  {cor(.$Median_house_value,.$Built_2005_or_later)}
+```
+(iii) In all of Pennsylvania
+```{r}
+ca_pa3 %>% filter(STATEFP==42) %>% 
+  {cor(.$Median_house_value,.$Built_2005_or_later)}
+```
+(iv) In Alameda County
+```{r}
+ca_pa3 %>% filter(STATEFP==6,COUNTYFP==1) %>% 
+  {cor(.$Median_house_value,.$Built_2005_or_later)}
+```
+(v) In Santa Clara County
+```{r}
+ca_pa3 %>% filter(STATEFP==6,COUNTYFP==85) %>% 
+  {cor(.$Median_house_value,.$Built_2005_or_later)}
+```
+(vi) In Allegheny Count
+```{r}
+ca_pa3 %>% filter(STATEFP==42,COUNTYFP==3) %>% 
+  {cor(.$Median_house_value,.$Built_2005_or_later)}
+```
+**(e)** Median house values against median income.
+(i) For Alameda:
+```{r}
+ca_pa3 %>% filter(STATEFP==6,COUNTYFP==1) %>% 
+  ggplot() +
+  geom_point(aes(x = Median_household_income, 
+    y = Median_house_value),na.rm = TRUE) +
+  labs(x = "Median Household Income",
+  y = "Madian House Value",title = "Median House Values vs Median Income
+  For Alameda") 
+```
+(ii) For Santa Clara:
+```{r}
+ca_pa3 %>% filter(STATEFP==6,COUNTYFP==85) %>% 
+  ggplot() +
+  geom_point(aes(x = Median_household_income, 
+    y = Median_house_value),na.rm = TRUE) +
+  labs(x = "Median Household Income",
+  y = "Madian House Value",title = "Median House Values vs Median Income
+  For Santa Clara") 
+```
+(iii) For Allegheny:
+```{r}
+ca_pa3 %>% filter(STATEFP==42,COUNTYFP==3) %>% 
+  ggplot() +
+  geom_point(aes(x = Median_household_income, 
+    y = Median_house_value),na.rm = TRUE) +
+  labs(x = "Median Household Income",
+  y = "Madian House Value",title = "Median House Values vs Median Income
+  For Allegheny") 
+```
+
+**MB.Ch1.11. Run the following code:**
+```{r}
+gender <- factor(c(rep("female", 91), rep("male", 92)))
+table(gender)
+```
+Explain: table() gives the frequency of each element "female" and "male".
+
+```{r}
+gender <- factor(gender, levels=c("male", "female"))
+table(gender)
+```
+Explain: the output gives the frequency in levels, that is "male" and "female".
+
+```{r}
+gender <- factor(gender, levels=c("Male", "female"))
+# Note the mistake: "Male" should be "male"
+table(gender)
+```
+Explain: the output gives the frequency of levels, that is "Male" and "female". While there is no "Male" in gender, so the value of Male is 0.
+
+```{r}
+table(gender, exclude=NULL)
+```
+Explain:The argument "exclude=NULL" require to report NA's, so the result gives <NA>=92 with respond to "male" that is not in the levels.
+
+```{r}
+rm(gender)  # Remove gender
+```
+     
+**MB.Ch1.12.** 
+
+```{r}
+k<-0
+Func <- function(x,cutoff_value){
+  for(i in x){
+    if (i>cutoff_value){
+      k<-k+1
+    }
+  }
+  prop <- k/length(x)
+  return(prop)
+}
+```
+
+
+(a) For the sequence of numbers 1, 2, . . . , 100, we set the value cutoff 35,67.3 and 89, then the expected proportion result is 0.65, 0.33 and 0.11 correspondingly. And following codes check this.
+```{r}
+x<-1:100
+vc<-35
+Func(x,vc)
+```
+```{r}
+vc<-67.3
+Func(x,vc)
+```
+```{r}
+vc<-89
+Func(x,vc)
+```
+
+**MB.Ch1.18. **
+Using following commands, we can convert Rabbit to the required form. 
+```{r}
+Dose <- unstack(Rabbit, Dose ~ Animal)[,1]
+Treatment <- unstack(Rabbit, Treatment ~ Animal)[,1]
+BPchange <- unstack(Rabbit, BPchange ~ Animal)
+Rabbit.df <- data.frame(Treatment, Dose, BPchange)
+Rabbit.df
+```
+
