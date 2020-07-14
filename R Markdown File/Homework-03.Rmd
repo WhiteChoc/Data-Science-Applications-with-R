@@ -4,7 +4,6 @@ author: "Shen Dingtao  3170104764"
 output: pdf_document
 ---
 ```{r setup, message = F, include=FALSE}
-options(htmltools.dir.version = FALSE)
 library(tidyverse)
 library(DAAG)
 ```

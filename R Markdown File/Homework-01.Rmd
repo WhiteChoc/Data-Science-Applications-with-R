@@ -56,11 +56,13 @@ Explain: The first command `vector1 <- c("5", "12", "7", "32")` creates a vector
 
 **(b)** 
 
-1) For the `c()` function, The output type is determined from the highest type of the components in the hierarchy NULL < raw < logical < integer < double < complex < character < list < expression. So for the command `vector2 <-c("5",7,12)`, the type of `vector2` is character. That is
+1) Assigns a character and two integers to a vector, coercing it into a vector of characters.
+
 ```{r}
 (vector2 <- c("5",7,12))
 ```
 Thus, `vector2[2]="7", vector2[3]="12"`, they are not numeric, which means `vector2[2]+vector2[3]` is an error. 
+
 2) The function `data.frame` create data frames:
 ```{r}
 dataframe3 <- data.frame(z1="5",z2=7,z3=12)
@@ -81,16 +83,16 @@ And to access elements of the list, `[[ ]]` drops the names and structures, `[ ]
 list4[[2]]
 list4[[4]]
 ```
-They are numeric.
+They are numeric. Adds the two integers together.
 ```{r}
 list4[2]
 list4[4]
 ```
-They are not numberic.
-Then `list4[[2]]+list4[[4]]` is legal and `list4[2]+list4[4]` is an error.
+Adds two lists of length 1 together, which is an error.
 ```{r}
 list4[[2]]+list4[[4]]
 ```
+Adds the two integers together.
 
 **3. Working with functions and operators.**
 
