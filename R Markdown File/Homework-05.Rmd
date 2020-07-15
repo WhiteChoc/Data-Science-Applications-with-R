@@ -74,5 +74,5 @@ We can see that plots of the two estimates are very close to each other. We can 
 ggplot()+
   geom_point(aes(x=a_E_Y,y=a_E_Y2),color="black")+
   geom_line(aes(x=a_E_Y,y=a_E_Y),color="red")+
-  labs(x="a_by_e.mre",y="a_by_4")
+  labs(x="a_by_e.mre",y="a_by_4 or a_by_e.mre")
 ```

@@ -202,30 +202,35 @@ ca_pa3 %>% filter(STATEFP==42,COUNTYFP==3) %>%
 gender <- factor(c(rep("female", 91), rep("male", 92)))
 table(gender)
 ```
-Explain: table() gives the frequency of each element "female" and "male".
 
 ```{r}
 gender <- factor(gender, levels=c("male", "female"))
 table(gender)
 ```
-Explain: the output gives the frequency in levels, that is "male" and "female".
 
 ```{r}
 gender <- factor(gender, levels=c("Male", "female"))
 # Note the mistake: "Male" should be "male"
 table(gender)
 ```
-Explain: the output gives the frequency of levels, that is "Male" and "female". While there is no "Male" in gender, so the value of Male is 0.
 
 ```{r}
 table(gender, exclude=NULL)
 ```
-Explain:The argument "exclude=NULL" require to report NA's, so the result gives <NA>=92 with respond to "male" that is not in the levels.
 
 ```{r}
 rm(gender)  # Remove gender
 ```
-     
+**Explain: **`table` uses the cross-classifying factors to build a contingency table of the counts at each combination of factor levels. That is, it is used to calculate frequency.
+
+i) In the first command, `factor` turns a vector into a factor data type. And then `gender` has 91 'female's and 92 'male's, with levels ("female","male").
+
+ii) In the second command, attribute `levels=()` is used to returns the value of the levels of its argument , which select values that fits levels in the data as valid levels. Then we use table to count frequency of the levels ("male", "female"), in order.
+
+iii) In the third command, attribute `levels=()` is used to set the attribute, which makes "Male" that is not in gender a level, and the number of its value is 0, and all "male"s in gender is discarded as invalid values.
+
+iv) In the fourth command, we use `exclude=NULL` in `table()` to count all the invalid values. So previous discarded "male"s are counted and was outputted as <NA>:92
+
 **MB.Ch1.12.** 
 
 ```{r}
