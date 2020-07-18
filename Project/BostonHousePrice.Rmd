@@ -1,0 +1,264 @@
+---
+title: "BostonHousePrice"
+author: "沈鼎涛"
+date: "2020/7/18"
+output:
+  html_document:
+    df_print: paged
+    toc: true
+documentclass: ctexart
+---
+
+```{r setup,message=FALSE,include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggplot2)
+library(corrplot)
+```
+## 背景
+
+### 问题介绍
+
+### 数据集
+
+## 数据集处理
+
+### 数据加载
+
+数据集的载入
+```{r,message=FALSE}
+library(MASS)
+attach(Boston)
+```
+查看Boston数据集的维数和结构：
+```{r}
+glimpse(Boston)
+```
+查看Boston数据集的基本统计量
+```{r}
+summary(Boston)
+```
+
+### 数据预处理
+检查Boston数据集是否包含缺失值或重复值：
+```{r}
+any(is.na(Boston))
+any(duplicated(Boston))
+```
+结果均为`FALSE`，说明Boston数据集无缺失值或重复值，不需要进行数据清洗。
+
+## 数据可视化与分析
+
+### 相关性分析
+
+Boston数据集中包含14个变量，首先计算其两两之间的相关系数，得到相关系数矩阵`coor_matrix`，并对其进行可视化处理：
+```{r warning=FALSE}
+corr_matrix<-cor(Boston)
+corrplot(corr_matrix,method="number", type="upper",diag=FALSE)
+```
+
+我们可以发现，到高速路的可达性指数(rad)和全价的财产税率(tax)相关性最高，高达0.91，呈现显著的正相关关系。
+
+其中，我们最为关心房价中值(medv)和其余变量的相关关系，做它们的散点图：
+```{r warning=FALSE}
+Boston %>%
+  gather(var, val, -medv) %>%
+  ggplot(aes(x = val, y = medv)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = TRUE, col = "blue") +
+  facet_wrap(~var, scales = "free") +
+  theme_gray() +
+  ggtitle("房价中值与其他变量的散点图及拟合") 
+```
+
+可以明显地看到，房价中值(medv)和平均房间数(rm)具有较为显著的正相关关系，和低收入人口比例(lstat)具有较为显著的负相关关系。
+
+结合以上两图我们可以得出结论：
+
+- 
+
+### 房价中值(medv)的分析
+
+根据变量chas，即是否临近Charles河，做出房价分布的直方图：
+
+```{r}
+Boston$chas=factor(Boston$chas)
+ggplot(Boston, aes(x = medv, fill = chas)) +
+  geom_histogram(position = "identity", alpha = 0.4,bins=30)+
+  ggtitle("房价中值(medv)的频数分布直方图(按是否临近查尔斯河分类)")
+```
+medv的相关统计量为：
+```{r}
+summary(Boston$medv)
+```
+
+## 房价预测模型
+
+将数据按3:1划分为训练集Boston.train和测试集Boston.test
+```{r}
+data(Boston)
+smp_size<-floor(0.75*nrow(Boston))
+set.seed(12)
+train_index<-sample(seq_len(nrow(Boston)), size=smp_size)
+Boston.train<-Boston[train_index, ]
+Boston.test<-Boston[-train_index, ]
+```
+我们利用训练集的数据进行参数拟合，并在测试集上测试模型的拟合效果。对于模型的选取，我们首先尝试简单的单变量线性回归模型、单变量非线性回归模型以及多变量回归模型。
+
+### 简单单变量线性回归模型
+
+对于模型变量的选择，根据上一节的相关性分析，低收入人口比例lstat与medv的相关性最为显著，因此我们优先选择该变量来构造简单单变量线性回归模型。
+
+```{r}
+model.slm=lm(medv~lstat,data=Boston.train)
+```
+查看其统计量：
+```{r}
+summary(model.slm)
+```
+通过查看模型的结果数据，我们可以发现通过T检验的截距和自变量lstat都是非常显著。我们首先在测试集上进行预测和误差分析：
+```{r}
+library(Metrics)
+model1.evaluate<-predict(model.slm, Boston.test) 
+ggplot(data = Boston.test) +
+  geom_point(aes(x = lstat, y = medv),col="black") +
+  geom_line(aes(x = lstat, y = model1.evaluate),col="orange") +
+  labs(title = "medv vs lstat - model1",
+       y = "medv($1000s)",
+       x = "lstat")
+```
+```{r}
+model1.rmse<-rmse(Boston.test[,14],model1.evaluate)
+model1.rmse
+```
+查看其统计检验图像：
+```{r}
+plot(model.slm)
+```
+第一张图表明在medv和lstat之间存在非线性项，因此我们考虑构造单变量非线性回归模型。
+
+### 单变量非线性回归模型
+
+在单变量线性回归模型medv~lstat的基础上，我们添加lstat的非线性项$lstat^{2}$，即：
+```{r}
+model.snlm=lm(medv~lstat+I(lstat^2),data=Boston.train)
+```
+同样，查看其统计量：
+```{r}
+summary(model.snlm)
+```
+结果显示T检验的截距和自变量lstat都是非常显著，且相比于线性模型，相关系数的$R^{2}$检验值也显著增加。接下来在测试集上进行预测：
+
+```{r}
+model2.evaluate<-predict(model.snlm, Boston.test) 
+ggplot(data = Boston.test) +
+  geom_point(aes(x = lstat, y = medv),col="black") +
+  geom_line(aes(x = lstat, y = model2.evaluate),col="orange") +
+  labs(title = "medv vs lstat - model2",
+       y = "medv($1000s)",
+       x = "lstat")
+```
+拟合效果明显优于简单的单变量线性模型。最后，计算其均方根误差：
+```{r}
+model2.rmse<-rmse(Boston.test[,14],model2.evaluate)
+model2.rmse
+```
+查看其Diagnostics plot：
+```{r}
+plot(model.snlm)
+```
+通过添加非线性因子，我们将模型在测试集上预测的均方根误差有效降低，同时显著提高了对于模型的拟合效果。同时，上面图一显示模型需要进一步修改，我们考虑引入更多的变量来改进我们的模型。
+
+### 多变量回归模型
+
+通过引入更多的变量构造多变量回归模型，我们有两种思路：一是在上一节中拟合效果已经较好的的单变量非线性模型上添加变量；二是考虑使用广义加性模型Generalized Additive Models(GAM)。
+
+#### 单变量非线性回归模型基础上添加变量
+在不了解其经济社会学原理的情况下，将所有变量纳入考虑进行回归是最为稳妥的做法。即：
+```{r}
+model.mrm=lm(medv~crim+zn+indus+chas+nox+rm+age+dis+rad+tax+
+               ptratio+black+lstat+I(lstat^2),data=Boston.train)
+```
+查看其统计量：
+```{r}
+summary(model.mrm)
+```
+根据结果可以看出，zn,indus,chas,age和black这些变量的T检验是不显著的，其余的变量的T检验都是显著的。回归的整体$R^{2}$检验值相比较单变量非线性模型有所提高。
+
+其次查看其在测试集上的表现：
+```{r}
+model3.evaluate<-predict(model.mrm, Boston.test) 
+ggplot(data = Boston.test) +
+  geom_point(aes(x = lstat, y = medv),col="black") +
+  geom_line(aes(x = lstat, y = model3.evaluate),col="orange") +
+  labs(title = "medv vs lstat - model3",
+       y = "medv($1000s)",
+       x = "lstat")
+```
+计算其在测试集上的RMSE，相比之前有了进一步的下降:
+```{r}
+model3.rmse<-rmse(Boston.test[,14],model3.evaluate)
+model3.rmse
+```
+```{r}
+plot(model.mrm)
+```
+图一显示，模型中某些变量和medv并不是线性关系，我们仍需要进一步改进模型，因而考虑引入广义加性模型。
+
+#### 广义加性模型GAM
+
+在上面的多变量回归中，除lstat外，新引入的变量均以线性形式存在，然而实际情况并不一定如此，但我们并不清楚其具体的存在形式，因此我们考虑利用GAM，对部分变量使用光滑样条函数来拟合。
+
+首先，变量chas和rad是不连续的，因此不适宜使用光滑样条函数拟合，除此之外的变量我们尝试均用样条函数拟合，建立模型：
+```{r}
+library(mgcv)
+model.gam.0 <- gam(medv ~ s(crim) + s(zn) + s(indus) + s(nox) +
+                   s(rm) + s(age) + s(dis) + 
+                   s(tax) + s(ptratio) + s(black) + 
+                   s(lstat) + chas + rad, data = Boston.train)
+summary(model.gam.0)
+```
+edf统计量接近1的变量可能和medv具有线性关系，因此再结合p检验值分析，上述结果中的zn，age，black以及ptratio同medv可能是线性关系，其他的变量仍用样条函数拟合,同时剔除indus，对模型调整如下：
+```{r}
+model.gam.1 <- gam(medv ~ s(crim) + zn  + s(nox) +
+                   s(rm) + age + s(dis) + 
+                   s(tax) + ptratio + black + 
+                   s(lstat) + chas + rad, data = Boston.train)
+summary(model.gam.1)
+```
+
+进一步，剔除显著性极低的zn,age,black和chas变量，调整模型为：
+
+```{r}
+model.gam <- gam(medv ~ s(crim)  + s(nox) +s(rm) + s(dis) + 
+            s(tax) + ptratio + s(lstat)  + rad, 
+            data = Boston.train)
+summary(model.gam)
+```
+
+可见各变量的显著程度明显增大，且$R^{2}$检验值相比之前显著提高，拟合程度优良，且各变量的显著性都很高，得到了较好的统计性质。
+
+GAM模型中个变量和medv的非线性关系如下图所示：
+```{r}
+plot(model.gam, shade = TRUE, seWithMean = TRUE, scale = 0)
+```
+
+观察GAM模型在测试集上的表现：
+```{r}
+model4.evaluate<-predict(model.gam, Boston.test) 
+ggplot(data = Boston.test) +
+  geom_point(aes(x = lstat, y = medv),col="black") +
+  geom_line(aes(x = lstat, y = model4.evaluate),col="orange") +
+  labs(title = "medv vs lstat - model4",
+       y = "medv($1000s)",
+       x = "lstat")
+```
+计算其在测试集上的RMSE，相比之前的模型有显著降低：
+```{r}
+model4.rmse<-rmse(Boston.test[,14],model4.evaluate)
+model4.rmse
+```
+
+## 结论
+
+## 参考文献
